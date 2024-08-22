@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:food_delivery_app/app_router.gr.dart';
+import 'package:flutter_food_delivery_app/auth/login_or_register.dart';
+import 'package:flutter_food_delivery_app/models/restaurant.dart';
+import 'package:flutter_food_delivery_app/themes/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        ChangeNotifierProvider(create: (context) => Restaurant()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
-  final _appRouter = AppRouter();
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerDelegate: _appRouter.delegate(),
-      routeInformationParser: _appRouter.defaultRouteParser(),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: const LoginOrRegister(),
+      theme: Provider.of<ThemeProvider>(context).themeData,
     );
   }
 }
