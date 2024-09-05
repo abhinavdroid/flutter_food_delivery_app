@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_food_delivery_app/components/my_current_location.dart';
 import 'package:flutter_food_delivery_app/components/my_description_box.dart';
 import 'package:flutter_food_delivery_app/components/my_drawer.dart';
+import 'package:flutter_food_delivery_app/components/my_food_tile.dart';
 import 'package:flutter_food_delivery_app/components/my_sliver_app_bar.dart';
 import 'package:flutter_food_delivery_app/components/my_tab_bar.dart';
 import 'package:flutter_food_delivery_app/models/food.dart';
 import 'package:flutter_food_delivery_app/models/restaurant.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_food_delivery_app/pages/cart_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,17 +19,20 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late Restaurant _restaurant;
 
   @override
   void initState() {
     super.initState();
     _tabController =
         TabController(length: FoodCategory.values.length, vsync: this);
+    _restaurant = Restaurant();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _restaurant.dispose();
     super.dispose();
   }
 
@@ -42,15 +46,23 @@ class _HomePageState extends State<HomePage>
 
       return ListView.builder(
         itemCount: categoryMenu.length,
-        physics: const NeverScrollableScrollPhysics(),
         padding: EdgeInsets.zero,
         itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(categoryMenu[index].name),
-          );
+          return MyFoodTile(food: categoryMenu[index]);
         },
       );
     }).toList();
+  }
+
+  void _navigateToCartPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => CartPage()),
+    );
+  }
+
+  Stream<List<Food>> get menuStream async* {
+    await Future.delayed(const Duration(seconds: 3));
+    yield _restaurant.menu;
   }
 
   @override
@@ -63,6 +75,7 @@ class _HomePageState extends State<HomePage>
             title: MyTabBar(
               tabController: _tabController,
             ),
+            onCartButtonPressed: _navigateToCartPage,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -77,11 +90,21 @@ class _HomePageState extends State<HomePage>
             ),
           ),
         ],
-        body: Consumer<Restaurant>(
-          builder: (context, restaurant, child) => TabBarView(
-            controller: _tabController,
-            children: getFoodInThisCategory(restaurant.menu),
-          ),
+        body: StreamBuilder<List<Food>>(
+          stream: menuStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text('No food items available.'));
+            }
+            return TabBarView(
+              controller: _tabController,
+              children: getFoodInThisCategory(snapshot.data!),
+            );
+          },
         ),
       ),
     );
